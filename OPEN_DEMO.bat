@@ -1,0 +1,3 @@
+@echo off
+echo Opening demo in browser...
+start simple_demo.html

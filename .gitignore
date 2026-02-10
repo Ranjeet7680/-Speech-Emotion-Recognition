@@ -1,0 +1,10 @@
+*.h5
+*.npy
+*.pyc
+__pycache__/
+data/
+*.wav
+*.mp3
+.vscode/
+*.log
+uploads/

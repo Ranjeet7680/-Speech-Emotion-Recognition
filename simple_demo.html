@@ -1,0 +1,1035 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Speech Emotion Recognition - Demo</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-20px); }
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        
+        @keyframes slideInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        @keyframes shimmer {
+            0% { background-position: -1000px 0; }
+            100% { background-position: 1000px 0; }
+        }
+        
+        @keyframes glow {
+            0%, 100% { box-shadow: 0 0 20px rgba(102, 126, 234, 0.5); }
+            50% { box-shadow: 0 0 40px rgba(102, 126, 234, 0.8); }
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(-45deg, #667eea, #764ba2, #f093fb, #4facfe);
+            background-size: 400% 400%;
+            animation: gradientShift 15s ease infinite;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            position: relative;
+            overflow-x: hidden;
+        }
+        
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at 20% 50%, rgba(255,255,255,0.1) 0%, transparent 50%),
+                        radial-gradient(circle at 80% 80%, rgba(255,255,255,0.1) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: 1;
+        }
+        
+        .particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+        }
+        
+        .particle {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 50%;
+            animation: float 6s ease-in-out infinite;
+        }
+        
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 30px;
+            padding: 40px;
+            max-width: 1200px;
+            width: 100%;
+            box-shadow: 0 30px 90px rgba(0,0,0,0.3),
+                        0 0 0 1px rgba(255,255,255,0.3) inset;
+            position: relative;
+            z-index: 2;
+            animation: slideInUp 0.8s ease-out;
+        }
+        
+        .container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #667eea, #764ba2, #f093fb, #4facfe);
+            background-size: 200% 100%;
+            animation: shimmer 3s linear infinite;
+            border-radius: 30px 30px 0 0;
+        }
+        
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-top: 30px;
+        }
+        
+        @media (max-width: 768px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .card {
+            background: linear-gradient(135deg, rgba(248, 249, 255, 0.9) 0%, rgba(255, 255, 255, 0.9) 100%);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1),
+                        0 0 0 1px rgba(255,255,255,0.5) inset;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            opacity: 0;
+            animation: slideInUp 0.8s ease-out 0.8s forwards;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.15),
+                        0 0 0 1px rgba(255,255,255,0.5) inset;
+        }
+        
+        .card h2 {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 15px;
+            font-size: 1.4em;
+            font-weight: 700;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .stat-box {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .stat-box::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            transform: scaleX(0);
+            transition: transform 0.3s;
+        }
+        
+        .stat-box:hover {
+            transform: translateY(-5px) scale(1.02);
+            box-shadow: 0 15px 40px rgba(102, 126, 234, 0.2);
+        }
+        
+        .stat-box:hover::before {
+            transform: scaleX(1);
+        }
+        
+        .stat-value {
+            font-size: 2.5em;
+            font-weight: 800;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            transition: all 0.3s;
+        }
+        
+        .stat-box:hover .stat-value {
+            transform: scale(1.1);
+        }
+        
+        .stat-label {
+            color: #666;
+            font-size: 0.9em;
+            margin-top: 5px;
+        }
+        
+        .history-item {
+            background: white;
+            padding: 18px;
+            border-radius: 15px;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.08);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border-left: 4px solid transparent;
+            animation: slideInUp 0.5s ease-out;
+        }
+        
+        .history-item:hover {
+            transform: translateX(10px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.2);
+            border-left-color: #667eea;
+        }
+        
+        .history-emotion {
+            font-weight: bold;
+            color: #667eea;
+            font-size: 1.1em;
+        }
+        
+        .history-time {
+            color: #999;
+            font-size: 0.85em;
+        }
+        
+        .history-confidence {
+            color: #666;
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin-top: 15px;
+        }
+        
+        .clear-btn {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+            padding: 10px 20px;
+            font-size: 0.9em;
+            margin-top: 0;
+            width: auto;
+            box-shadow: 0 5px 15px rgba(255, 107, 107, 0.3);
+        }
+        
+        .clear-btn:hover {
+            background: linear-gradient(135deg, #ff5252 0%, #e63946 100%);
+            box-shadow: 0 8px 25px rgba(255, 107, 107, 0.5);
+        }
+        
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .tab {
+            padding: 12px 24px;
+            background: white;
+            border: 2px solid #667eea;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            color: #667eea;
+            font-weight: 600;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .tab::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            transform: scaleX(0);
+            transform-origin: left;
+            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: -1;
+        }
+        
+        .tab:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+        
+        .tab.active {
+            color: white;
+            border-color: #764ba2;
+        }
+        
+        .tab.active::before {
+            transform: scaleX(1);
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+            font-weight: 700;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: pulse 3s ease-in-out infinite;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+            opacity: 0;
+            animation: slideInUp 0.8s ease-out 0.2s forwards;
+        }
+        
+        .upload-area {
+            border: 3px dashed #667eea;
+            border-radius: 20px;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            margin-bottom: 20px;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
+            position: relative;
+            overflow: hidden;
+            opacity: 0;
+            animation: slideInUp 0.8s ease-out 0.4s forwards;
+        }
+        
+        .upload-area::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(102, 126, 234, 0.1);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+        
+        .upload-area:hover::before {
+            width: 500px;
+            height: 500px;
+        }
+        
+        .upload-area:hover {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+            border-color: #764ba2;
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(102, 126, 234, 0.3);
+        }
+        
+        #fileInput {
+            display: none;
+        }
+        
+        .upload-icon {
+            font-size: 3em;
+            margin-bottom: 10px;
+            display: inline-block;
+            animation: float 3s ease-in-out infinite;
+            position: relative;
+            z-index: 1;
+        }
+        
+        button {
+            width: 100%;
+            padding: 18px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 15px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            margin-top: 10px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+            opacity: 0;
+            animation: slideInUp 0.8s ease-out 0.6s forwards;
+        }
+        
+        button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            transition: left 0.5s;
+        }
+        
+        button:hover::before {
+            left: 100%;
+        }
+        
+        button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 40px rgba(102, 126, 234, 0.6);
+        }
+        
+        button:active {
+            transform: translateY(-1px);
+        }
+        
+        .result {
+            margin-top: 30px;
+            padding: 25px;
+            background: linear-gradient(135deg, rgba(248, 249, 255, 0.9) 0%, rgba(255, 255, 255, 0.9) 100%);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            display: none;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1),
+                        0 0 0 1px rgba(255,255,255,0.5) inset;
+            animation: slideInUp 0.6s ease-out;
+        }
+        
+        .emotion-result {
+            text-align: center;
+            font-size: 3em;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 10px;
+            font-weight: 900;
+            animation: pulse 2s ease-in-out infinite;
+            text-shadow: 0 0 30px rgba(102, 126, 234, 0.3);
+        }
+        
+        .confidence {
+            text-align: center;
+            color: #666;
+            margin-bottom: 20px;
+        }
+        
+        .probability-bar {
+            margin: 10px 0;
+        }
+        
+        .prob-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+            font-size: 0.9em;
+        }
+        
+        .bar {
+            height: 28px;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            border-radius: 8px;
+            transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .bar::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            animation: shimmer 2s infinite;
+        }
+        
+        .bar-container {
+            background: linear-gradient(135deg, #e8e8e8 0%, #f0f0f0 100%);
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05) inset;
+        }
+        
+        .info-box {
+            background: linear-gradient(135deg, rgba(255, 243, 205, 0.9) 0%, rgba(255, 235, 179, 0.9) 100%);
+            backdrop-filter: blur(10px);
+            border: 2px solid #ffc107;
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 20px;
+            box-shadow: 0 10px 30px rgba(255, 193, 7, 0.2);
+            opacity: 0;
+            animation: slideInUp 0.8s ease-out 1s forwards;
+        }
+        
+        .info-box h3 {
+            color: #856404;
+            margin-bottom: 10px;
+        }
+        
+        .info-box p {
+            color: #856404;
+            line-height: 1.6;
+        }
+        
+        .file-info {
+            margin-top: 15px;
+            padding: 15px;
+            background: linear-gradient(135deg, rgba(232, 245, 233, 0.9) 0%, rgba(200, 230, 201, 0.9) 100%);
+            border-radius: 12px;
+            display: none;
+            border-left: 4px solid #4caf50;
+            box-shadow: 0 5px 15px rgba(76, 175, 80, 0.2);
+            animation: slideInUp 0.5s ease-out;
+        }
+    </style>
+</head>
+<body>
+    <div class="particles" id="particles"></div>
+    <div class="container">
+        <h1>🎤 Speech Emotion Recognition</h1>
+        <p class="subtitle">Upload an audio file to detect emotions with advanced analytics</p>
+        
+        <div class="upload-area" id="uploadArea">
+            <div class="upload-icon">📁</div>
+            <p>Click to upload or drag and drop</p>
+            <p style="font-size: 0.9em; color: #999; margin-top: 10px;">
+                Supported: WAV, MP3, OGG, FLAC (Max 16MB)
+            </p>
+            <input type="file" id="fileInput" accept=".wav,.mp3,.ogg,.flac">
+        </div>
+        
+        <div class="file-info" id="fileInfo"></div>
+        
+        <button id="predictBtn" onclick="simulatePredict()">Analyze Emotion (Demo)</button>
+        
+        <div class="result" id="result">
+            <div class="emotion-result" id="emotionResult"></div>
+            <div class="confidence" id="confidence"></div>
+            <div id="probabilities"></div>
+        </div>
+        
+        <div class="main-grid">
+            <!-- Analytics Section -->
+            <div class="card">
+                <h2>📊 Analytics</h2>
+                <div class="tabs">
+                    <div class="tab active" onclick="switchTab('bar')">Bar Chart</div>
+                    <div class="tab" onclick="switchTab('pie')">Pie Chart</div>
+                    <div class="tab" onclick="switchTab('radar')">Radar Chart</div>
+                </div>
+                <div class="tab-content active" id="bar-content">
+                    <div class="chart-container">
+                        <canvas id="barChart"></canvas>
+                    </div>
+                </div>
+                <div class="tab-content" id="pie-content">
+                    <div class="chart-container">
+                        <canvas id="pieChart"></canvas>
+                    </div>
+                </div>
+                <div class="tab-content" id="radar-content">
+                    <div class="chart-container">
+                        <canvas id="radarChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Statistics Section -->
+            <div class="card">
+                <h2>📈 Statistics</h2>
+                <div class="stats-grid">
+                    <div class="stat-box">
+                        <div class="stat-value" id="totalAnalyzed">0</div>
+                        <div class="stat-label">Total Analyzed</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value" id="avgConfidence">0%</div>
+                        <div class="stat-label">Avg Confidence</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value" id="topEmotion">-</div>
+                        <div class="stat-label">Most Common</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value" id="lastEmotion">-</div>
+                        <div class="stat-label">Last Detected</div>
+                    </div>
+                </div>
+                <div class="chart-container" style="height: 200px; margin-top: 20px;">
+                    <canvas id="trendChart"></canvas>
+                </div>
+            </div>
+            
+            <!-- History Section -->
+            <div class="card" style="grid-column: 1 / -1;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <h2>📝 Analysis History</h2>
+                    <button class="clear-btn" onclick="clearHistory()">Clear History</button>
+                </div>
+                <div id="historyList" style="max-height: 300px; overflow-y: auto; margin-top: 15px;">
+                    <p style="text-align: center; color: #999; padding: 20px;">No analysis yet. Upload an audio file to get started!</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="info-box">
+            <h3>⚠️ Demo Mode</h3>
+            <p>
+                This is a standalone demo showing the interface. To use real emotion recognition:
+                <br><br>
+                1. Install dependencies: <code>pip install -r requirements.txt</code><br>
+                2. Create demo model: <code>python create_demo_model.py</code><br>
+                3. Run server: <code>python run_app.py</code> or double-click <code>START_HERE.bat</code>
+            </p>
+        </div>
+    </div>
+    
+    <script>
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const fileInfo = document.getElementById('fileInfo');
+        const result = document.getElementById('result');
+        
+        let selectedFile = null;
+        let analysisHistory = JSON.parse(localStorage.getItem('emotionHistory') || '[]');
+        let barChart, pieChart, radarChart, trendChart;
+        
+        // Initialize charts on page load
+        window.addEventListener('load', () => {
+            initCharts();
+            updateStatistics();
+            updateHistory();
+            createParticles();
+        });
+        
+        // Create floating particles
+        function createParticles() {
+            const particlesContainer = document.getElementById('particles');
+            const particleCount = 30;
+            
+            for (let i = 0; i < particleCount; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                
+                const size = Math.random() * 5 + 2;
+                particle.style.width = size + 'px';
+                particle.style.height = size + 'px';
+                particle.style.left = Math.random() * 100 + '%';
+                particle.style.top = Math.random() * 100 + '%';
+                particle.style.animationDelay = Math.random() * 6 + 's';
+                particle.style.animationDuration = (Math.random() * 4 + 4) + 's';
+                
+                particlesContainer.appendChild(particle);
+            }
+        }
+        
+        uploadArea.addEventListener('click', () => fileInput.click());
+        
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.style.background = '#f0f0ff';
+        });
+        
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.style.background = '';
+        });
+        
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.style.background = '';
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFile(files[0]);
+            }
+        });
+        
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFile(e.target.files[0]);
+            }
+        });
+        
+        function handleFile(file) {
+            selectedFile = file;
+            fileInfo.style.display = 'block';
+            fileInfo.innerHTML = `<strong>Selected:</strong> ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`;
+            result.style.display = 'none';
+        }
+        
+        function simulatePredict() {
+            if (!selectedFile) {
+                alert('Please select an audio file first!');
+                return;
+            }
+            
+            // Simulate prediction with random results
+            const emotions = ['angry', 'happy', 'sad', 'neutral', 'fear', 'disgust', 'surprise'];
+            const randomEmotion = emotions[Math.floor(Math.random() * emotions.length)];
+            
+            // Generate random probabilities
+            const probs = {};
+            let total = 0;
+            emotions.forEach(e => {
+                probs[e] = Math.random();
+                total += probs[e];
+            });
+            
+            // Normalize and boost the selected emotion
+            Object.keys(probs).forEach(e => {
+                probs[e] = probs[e] / total;
+                if (e === randomEmotion) {
+                    probs[e] = Math.max(probs[e], 0.4 + Math.random() * 0.3);
+                }
+            });
+            
+            // Normalize again
+            total = Object.values(probs).reduce((a, b) => a + b, 0);
+            Object.keys(probs).forEach(e => {
+                probs[e] = probs[e] / total;
+            });
+            
+            displayResult({
+                emotion: randomEmotion,
+                confidence: probs[randomEmotion],
+                probabilities: probs
+            });
+        }
+        
+        function displayResult(data) {
+            document.getElementById('emotionResult').textContent = 
+                data.emotion.toUpperCase();
+            document.getElementById('confidence').textContent = 
+                `Confidence: ${(data.confidence * 100).toFixed(1)}%`;
+            
+            const probsDiv = document.getElementById('probabilities');
+            probsDiv.innerHTML = '<h3 style="margin-bottom: 15px;">All Emotions:</h3>';
+            
+            // Sort by probability
+            const sorted = Object.entries(data.probabilities).sort((a, b) => b[1] - a[1]);
+            
+            for (const [emotion, prob] of sorted) {
+                const percentage = (prob * 100).toFixed(1);
+                probsDiv.innerHTML += `
+                    <div class="probability-bar">
+                        <div class="prob-label">
+                            <span>${emotion}</span>
+                            <span>${percentage}%</span>
+                        </div>
+                        <div class="bar-container">
+                            <div class="bar" style="width: ${percentage}%"></div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            result.style.display = 'block';
+            
+            // Save to history
+            saveToHistory(data);
+            
+            // Update charts and stats
+            updateCharts(data);
+            updateStatistics();
+            updateHistory();
+        }
+        
+        function saveToHistory(data) {
+            const entry = {
+                emotion: data.emotion,
+                confidence: data.confidence,
+                probabilities: data.probabilities,
+                timestamp: new Date().toISOString(),
+                filename: selectedFile ? selectedFile.name : 'Unknown'
+            };
+            
+            analysisHistory.unshift(entry);
+            if (analysisHistory.length > 50) analysisHistory.pop();
+            
+            localStorage.setItem('emotionHistory', JSON.stringify(analysisHistory));
+        }
+        
+        function updateHistory() {
+            const historyList = document.getElementById('historyList');
+            
+            if (analysisHistory.length === 0) {
+                historyList.innerHTML = '<p style="text-align: center; color: #999; padding: 20px;">No analysis yet. Upload an audio file to get started!</p>';
+                return;
+            }
+            
+            historyList.innerHTML = analysisHistory.slice(0, 10).map(entry => {
+                const date = new Date(entry.timestamp);
+                const timeStr = date.toLocaleTimeString();
+                const dateStr = date.toLocaleDateString();
+                
+                return `
+                    <div class="history-item">
+                        <div>
+                            <div class="history-emotion">${entry.emotion.toUpperCase()}</div>
+                            <div style="font-size: 0.85em; color: #666;">${entry.filename}</div>
+                        </div>
+                        <div style="text-align: right;">
+                            <div class="history-confidence">${(entry.confidence * 100).toFixed(1)}%</div>
+                            <div class="history-time">${timeStr} ${dateStr}</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        function updateStatistics() {
+            if (analysisHistory.length === 0) {
+                document.getElementById('totalAnalyzed').textContent = '0';
+                document.getElementById('avgConfidence').textContent = '0%';
+                document.getElementById('topEmotion').textContent = '-';
+                document.getElementById('lastEmotion').textContent = '-';
+                return;
+            }
+            
+            // Total analyzed
+            document.getElementById('totalAnalyzed').textContent = analysisHistory.length;
+            
+            // Average confidence
+            const avgConf = analysisHistory.reduce((sum, e) => sum + e.confidence, 0) / analysisHistory.length;
+            document.getElementById('avgConfidence').textContent = (avgConf * 100).toFixed(1) + '%';
+            
+            // Most common emotion
+            const emotionCounts = {};
+            analysisHistory.forEach(e => {
+                emotionCounts[e.emotion] = (emotionCounts[e.emotion] || 0) + 1;
+            });
+            const topEmotion = Object.entries(emotionCounts).sort((a, b) => b[1] - a[1])[0];
+            document.getElementById('topEmotion').textContent = topEmotion ? topEmotion[0] : '-';
+            
+            // Last emotion
+            document.getElementById('lastEmotion').textContent = analysisHistory[0].emotion;
+            
+            // Update trend chart
+            updateTrendChart();
+        }
+        
+        function initCharts() {
+            const chartColors = {
+                angry: '#ff6b6b',
+                happy: '#ffd93d',
+                sad: '#6bcfff',
+                neutral: '#95a5a6',
+                fear: '#9b59b6',
+                disgust: '#2ecc71',
+                surprise: '#ff8c42'
+            };
+            
+            // Bar Chart
+            barChart = new Chart(document.getElementById('barChart'), {
+                type: 'bar',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Probability (%)',
+                        data: [],
+                        backgroundColor: Object.values(chartColors)
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100
+                        }
+                    }
+                }
+            });
+            
+            // Pie Chart
+            pieChart = new Chart(document.getElementById('pieChart'), {
+                type: 'pie',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        data: [],
+                        backgroundColor: Object.values(chartColors)
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false
+                }
+            });
+            
+            // Radar Chart
+            radarChart = new Chart(document.getElementById('radarChart'), {
+                type: 'radar',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Emotion Intensity',
+                        data: [],
+                        backgroundColor: 'rgba(102, 126, 234, 0.2)',
+                        borderColor: 'rgba(102, 126, 234, 1)',
+                        pointBackgroundColor: 'rgba(102, 126, 234, 1)'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        r: {
+                            beginAtZero: true,
+                            max: 100
+                        }
+                    }
+                }
+            });
+            
+            // Trend Chart
+            trendChart = new Chart(document.getElementById('trendChart'), {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Confidence Trend',
+                        data: [],
+                        borderColor: '#667eea',
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100
+                        }
+                    }
+                }
+            });
+        }
+        
+        function updateCharts(data) {
+            const emotions = Object.keys(data.probabilities);
+            const probabilities = Object.values(data.probabilities).map(p => (p * 100).toFixed(1));
+            
+            // Update bar chart
+            barChart.data.labels = emotions;
+            barChart.data.datasets[0].data = probabilities;
+            barChart.update();
+            
+            // Update pie chart
+            pieChart.data.labels = emotions;
+            pieChart.data.datasets[0].data = probabilities;
+            pieChart.update();
+            
+            // Update radar chart
+            radarChart.data.labels = emotions;
+            radarChart.data.datasets[0].data = probabilities;
+            radarChart.update();
+        }
+        
+        function updateTrendChart() {
+            const recent = analysisHistory.slice(0, 10).reverse();
+            const labels = recent.map((_, i) => `#${i + 1}`);
+            const data = recent.map(e => (e.confidence * 100).toFixed(1));
+            
+            trendChart.data.labels = labels;
+            trendChart.data.datasets[0].data = data;
+            trendChart.update();
+        }
+        
+        function switchTab(tabName) {
+            // Update tab buttons
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            // Update tab content
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            document.getElementById(tabName + '-content').classList.add('active');
+        }
+        
+        function clearHistory() {
+            if (confirm('Are you sure you want to clear all analysis history?')) {
+                analysisHistory = [];
+                localStorage.removeItem('emotionHistory');
+                updateStatistics();
+                updateHistory();
+                
+                // Reset trend chart
+                trendChart.data.labels = [];
+                trendChart.data.datasets[0].data = [];
+                trendChart.update();
+            }
+        }
+    </script>
+</body>
+</html>
